@@ -279,7 +279,7 @@ const state = { data: null, view: 'office', prevAgents: {}, seenDone: new Set() 
 /* MODE PANTAU (mirror publik): bila dibuka dari github.io / cdn.jsdelivr.net,
    state diambil dari jsDelivr (di-push VM tiap 20 dtk), semua aksi tulis nonaktif. */
 const IS_LIVE = /\.github\.io$/.test(location.hostname) || /cdn\.jsdelivr\.net$/.test(location.hostname);
-const LIVE_STATE_URL = 'https://cdn.jsdelivr.net/gh/aivastudioindo/mission-control-live@main/state.json';
+const LIVE_STATE_URL = 'https://cdn.jsdelivr.net/gh/aivastudioindo/mission-control-live@live-data/state.json';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtGB = b => b == null ? '—' : (b / 1073741824).toFixed(1) + ' GB';
 const fmtMB = b => b == null ? '—' : (b / 1048576).toFixed(0) + ' MB';
