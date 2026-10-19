@@ -280,6 +280,47 @@ const state = { data: null, view: 'office', prevAgents: {}, seenDone: new Set() 
    state diambil dari jsDelivr (di-push VM tiap 20 dtk), semua aksi tulis nonaktif. */
 const IS_LIVE = /\.github\.io$/.test(location.hostname) || /cdn\.jsdelivr\.net$/.test(location.hostname);
 const LIVE_STATE_URL = 'https://cdn.jsdelivr.net/gh/aivastudioindo/mission-control-live@live-data/state.json';
+/* Perintah HP → server via MQTT publik (broker.emqx.io), karena HP tidak bisa
+   menjangkau API server langsung. VM menjalankan inbox-mqtt.js yang subscribe
+   topik yang sama. */
+const MQTT_TOPIC = 'mc/alit/inbox';
+function mqttPublish(obj) {
+  return new Promise((resolve, reject) => {
+    let ws;
+    try { ws = new WebSocket('wss://broker.emqx.io:8084/mqtt'); }
+    catch (e) { reject(e); return; }
+    ws.binaryType = 'arraybuffer';
+    const timer = setTimeout(() => { try { ws.close(); } catch (e) {} reject(new Error('timeout')); }, 12000);
+    const te = new TextEncoder();
+    const encStr = s => { const b = te.encode(s); const r = new Uint8Array(2 + b.length); r[0] = b.length >> 8; r[1] = b.length & 255; r.set(b, 2); return r; };
+    const encRem = len => { const o = []; do { let d = len % 128; len = Math.floor(len / 128); if (len > 0) d |= 0x80; o.push(d); } while (len > 0); return Uint8Array.from(o); };
+    const cat = (...arrs) => { let n = 0; arrs.forEach(a => n += a.length); const r = new Uint8Array(n); let o = 0; arrs.forEach(a => { r.set(a, o); o += a.length; }); return r; };
+    const wsFrame = data => {
+      const h = data.length < 126 ? Uint8Array.of(0x82, data.length) : Uint8Array.of(0x82, 126, data.length >> 8, data.length & 255);
+      return cat(h, data);
+    };
+    ws.onopen = () => {
+      const cid = 'mc-web-' + Math.random().toString(36).slice(2, 10);
+      const body = cat(encStr('MQTT'), Uint8Array.of(0x04, 0x02, 0x00, 0x3c), encStr(cid));
+      ws.send(wsFrame(cat(Uint8Array.of(0x10), encRem(body.length), body)));
+    };
+    ws.onmessage = ev => {
+      const d = new Uint8Array(ev.data);
+      if (d[0] === 0x20 && d[3] === 0) { // CONNACK ok
+        const body = cat(encStr(MQTT_TOPIC), te.encode(JSON.stringify(obj)));
+        ws.send(wsFrame(cat(Uint8Array.of(0x30), encRem(body.length), body)));
+        clearTimeout(timer);
+        setTimeout(() => { try { ws.close(); } catch (e) {} resolve(); }, 900);
+      } else if (d[0] === 0x20) { clearTimeout(timer); reject(new Error('broker menolak')); }
+    };
+    ws.onerror = () => { clearTimeout(timer); reject(new Error('jaringan')); };
+    ws.onclose = () => {};
+  });
+}
+async function liveSend(obj, okMsg) {
+  try { await mqttPublish(obj); toast(okMsg); }
+  catch (e) { toast('Gagal terkirim — ketik perintahnya di chat WA saja'); }
+}
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtGB = b => b == null ? '—' : (b / 1073741824).toFixed(1) + ' GB';
 const fmtMB = b => b == null ? '—' : (b / 1048576).toFixed(0) + ' MB';
@@ -363,8 +404,8 @@ function renderTopbar(d) {
   else { b.innerHTML = '⏸ Pause dispatch'; b.classList.remove('danger-glow'); }
 }
 $('dispatch-btn').addEventListener('click', async () => {
-  if (IS_LIVE) { toast('Mode pantau: kontrol hanya dari jaringan lokal'); return; }
   const paused = !(state.data && state.data.dispatch_paused);
+  if (IS_LIVE) { liveSend({ t: 'd', paused }, paused ? 'Perintah PAUSE terkirim ✓' : 'Perintah RESUME terkirim ✓'); poll(); return; }
   const r = await fetch('/api/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paused }) });
   if (r.ok) { toast(paused ? 'Dispatch di-PAUSE — antrean ditahan' : 'Dispatch di-RESUME'); poll(); }
 });
