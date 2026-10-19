@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mission Control — AI Agent Fleet</title>
+<style>
+:root{
+  --bg:#0a0a0b; --panel:#121214; --panel2:#17171a; --border:#232327;
+  --text:#ededed; --muted:#a1a1aa; --faint:#6d6d78;
+  --accent:#7c8cf8; --green:#34d399; --amber:#f5a524; --red:#f31260;
+  --radius:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body.no-scroll{overflow:hidden}
+.app{display:flex;height:100dvh;overflow:hidden}
+/* ---------- Sidebar ---------- */
+.sidebar{width:224px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:18px 12px;gap:2px;z-index:20}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 16px}
+.brand-mark{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#3b3f6b,#7c8cf8);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;box-shadow:0 4px 14px rgba(124,140,248,.25)}
+.brand-name{font-weight:700;font-size:14px;letter-spacing:.02em}
+.brand-sub{font-size:10px;color:var(--faint);letter-spacing:.14em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:10px;color:var(--muted);cursor:pointer;font-size:13.5px;font-weight:500;border:1px solid transparent;width:100%;background:none;text-align:left;transition:all .15s}
+.nav-item:hover{background:var(--panel2);color:var(--text)}
+.nav-item.active{background:var(--panel2);color:var(--text);border-color:var(--border)}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;opacity:.85}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10.5px;font-weight:700;min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 6px}
+.sidebar-foot{margin-top:auto;padding:10px;font-size:11px;color:var(--faint);border-top:1px solid var(--border)}
+/* ---------- Main ---------- */
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:58px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 22px;border-bottom:1px solid var(--border);background:rgba(10,10,11,.85);backdrop-filter:blur(8px);z-index:10}
+.page-title{font-size:15px;font-weight:700;letter-spacing:.01em}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.clock{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tunnel-badge{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:999px;padding:5px 12px;text-decoration:none;max-width:260px}
+.tunnel-badge:hover{border-color:var(--accent)}
+.tunnel-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex-shrink:0}
+.tunnel-badge.online .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+.tunnel-badge span.url{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--text);transition:all .15s}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn.danger-glow{background:rgba(243,18,96,.12);border-color:rgba(243,18,96,.4);color:#ff7ba2}
+.btn:disabled{opacity:.5;cursor:default}
+.views{flex:1;overflow-y:auto;position:relative}
+.view{display:none;padding:26px;max-width:1180px;margin:0 auto;animation:fadeIn .25s}
+.view.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.h{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:22px 0 12px}
+.h:first-child{margin-top:0}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.grid{display:grid;gap:14px}
+.grid.c2{grid-template-columns:repeat(2,1fr)}
+.grid.c3{grid-template-columns:repeat(3,1fr)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:4px 11px}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.green{background:rgba(52,211,153,.12);color:var(--green)}
+.pill.gray{background:rgba(161,161,170,.12);color:var(--muted)}
+.pill.amber{background:rgba(245,165,36,.13);color:var(--amber)}
+.pill.red{background:rgba(243,18,96,.13);color:#ff7ba2}
+.pill.blue{background:rgba(124,140,248,.14);color:var(--accent)}
+.bar{height:8px;background:#1e1e22;border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .6s}
+.bar>i.green{background:var(--green)}.bar>i.red{background:var(--red)}.bar>i.amber{background:var(--amber)}
+.muted{color:var(--muted)}.small{font-size:12px}.tiny{font-size:11px;color:var(--faint)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+/* ---------- Office 3D ---------- */
+#view-office{padding:0;max-width:none;height:100%;position:relative;overflow:hidden}
+#scene3d{position:absolute;inset:0}
+#scene3d canvas{display:block;width:100%!important;height:100%!important;touch-action:none}
+.office-hint{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(18,18,20,.82);border:1px solid var(--border);border-radius:999px;padding:7px 16px;font-size:12px;color:var(--muted);pointer-events:none;backdrop-filter:blur(6px);white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+.office-legend{position:absolute;bottom:14px;left:14px;display:flex;gap:8px;flex-wrap:wrap}
+#toast{position:absolute;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:12px;font-size:13px;opacity:0;transition:all .3s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:5}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ---------- Agent cards ---------- */
+.agent-card{display:flex;gap:14px;align-items:flex-start}
+.agent-avatar{width:46px;height:46px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#0a0a0b}
+.agent-card .grow{flex:1;min-width:0}
+.agent-name{font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.agent-role{font-size:12px;color:var(--faint);margin-top:1px}
+.agent-task{margin-top:9px;font-size:12.5px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:8px 11px}
+/* ---------- Queue ---------- */
+.quick-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.queue-item{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--border)}
+.queue-item:last-child{border-bottom:none}
+.queue-item .grow{flex:1;min-width:0}
+.input,select.input,textarea.input{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:10px 13px;font-size:13.5px;font-family:inherit}
+.input:focus{outline:none;border-color:var(--accent)}
+textarea.input{resize:vertical;min-height:74px}
+label.lbl{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 7px}
+/* ---------- Schedules ---------- */
+.sched-row{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.sched-row:last-child{border-bottom:none}
+details.sys{margin-top:6px}
+details.sys summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:600;padding:10px 0}
+details.sys summary::-webkit-details-marker{display:none}
+details.sys summary .chev{transition:transform .2s;font-size:10px}
+details.sys[open] summary .chev{transform:rotate(90deg)}
+/* ---------- Log ---------- */
+#log-lines{background:#0d0d0f;border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.7;max-height:60vh;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+#log-lines .lt{color:var(--faint)}
+#log-lines .src-tasks{color:var(--accent)}
+#log-lines .src-watchdog{color:var(--amber)}
+/* ---------- Fleet ---------- */
+.fleet-cap{margin-top:10px;font-size:12.5px;color:var(--muted)}
+.fleet-cap li{margin-left:16px;margin-bottom:3px}
+/* ---------- Tokens ---------- */
+.tok-big{font-size:34px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+/* ---------- Mobile ---------- */
+@media (max-width:860px){
+  .sidebar{width:100%;height:auto;flex-direction:column;border-right:none;border-bottom:1px solid var(--border);padding:10px}
+  .brand{padding:2px 6px 8px}
+  .nav-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+  .nav-item{white-space:nowrap;padding:8px 12px}
+  .nav-item .lbl-t{display:none}
+  .sidebar-foot{display:none}
+  .app{flex-direction:column}
+  .view{padding:18px 14px}
+  .grid.c2,.grid.c3{grid-template-columns:1fr}
+  .topbar{padding:0 14px;gap:8px}
+  .tunnel-badge{max-width:150px}
+  .clock{display:none}
+  #view-office{height:100%}
+  body.no-scroll .views{overflow:hidden}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">M</div>
+      <div><div class="brand-name">Mission Control</div><div class="brand-sub">AI Agent Fleet</div></div>
+    </div>
+    <nav class="nav-scroll" id="nav">
+      <button class="nav-item active" data-view="office"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-6 9 6v11a1 1 0 01-1 1H4a1 1 0 01-1-1z"/></svg><span class="lbl-t">Virtual Office</span></button>
+      <button class="nav-item" data-view="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="lbl-t">Agent Overview</span></button>
+      <button class="nav-item" data-view="queue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="lbl-t">Task Queue</span><span class="nav-badge" id="queue-count" style="display:none">0</span></button>
+      <button class="nav-item" data-view="metrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="lbl-t">System Metrics</span></button>
+      <button class="nav-item" data-view="vps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><path d="M6 6.5h.01M6 17.5h.01"/></svg><span class="lbl-t">VPS Status</span></button>
+      <button class="nav-item" data-view="schedules"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="lbl-t">Tugas Terjadwal</span></button>
+      <button class="nav-item" data-view="tokens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1 1.5-1.5 3-1.5s3 .5 3 1.5-1 1.4-3 1.7-3 .8-3 1.8 1.5 1.5 3 1.5 3-.5 3-1.5"/></svg><span class="lbl-t">Token Status</span></button>
+      <button class="nav-item" data-view="fleet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><span class="lbl-t">Agent Fleet</span></button>
+      <button class="nav-item" data-view="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6M12 19h8"/></svg><span class="lbl-t">Real-Time Log</span></button>
+    </nav>
+    <div class="sidebar-foot">Polling <span class="mono">/api/state</span> tiap 3 dtk<br>Semua angka = data nyata</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="page-title" id="page-title">Virtual Office</div>
+      <div class="topbar-right">
+        <span class="pill blue" id="live-badge" style="display:none">📡 mode pantau • ~20 dtk</span>
+        <a class="tunnel-badge" id="tunnel-badge" href="#" target="_blank" rel="noopener"><span class="dot"></span><span class="url" id="tunnel-url">tunnel: —</span></a>
+        <span class="clock mono" id="clock">—</span>
+        <button class="btn ghost" id="dispatch-btn">⏸ Pause dispatch</button>
+      </div>
+    </header>
+
+    <div class="views" id="views">
+      <!-- 1. VIRTUAL OFFICE -->
+      <section class="view active" id="view-office">
+        <div id="scene3d"></div>
+        <div class="office-hint">🖱 drag untuk putar • scroll untuk zoom • klik robot untuk pause/resume</div>
+        <div class="office-legend">
+          <span class="pill green"><span class="dot"></span>working</span>
+          <span class="pill gray"><span class="dot"></span>idle</span>
+          <span class="pill amber"><span class="dot"></span>paused</span>
+        </div>
+        <div id="toast"></div>
+      </section>
+
+      <!-- 2. AGENT OVERVIEW -->
+      <section class="view" id="view-overview">
+        <div class="h">Status tim — live</div>
+        <div class="grid c2" id="agent-cards"></div>
+      </section>
+
+      <!-- 3. TASK QUEUE -->
+      <section class="view" id="view-queue">
+        <div class="h">Tambah quick task</div>
+        <div class="card">
+          <div class="quick-row">
+            <button class="btn quick-btn" data-agent="tono">🔍 Research</button>
+            <button class="btn quick-btn" data-agent="dani">💻 Coding</button>
+            <button class="btn quick-btn" data-agent="jaka">👁 Vision</button>
+            <button class="btn quick-btn" data-agent="mu">🎨 Design</button>
+          </div>
+          <label class="lbl" for="q-prompt">Prompt tugas</label>
+          <textarea class="input" id="q-prompt" placeholder="Contoh: riset 5 kompetitor ayam goreng bawang putih di Solo…"></textarea>
+          <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+            <select class="input" id="q-agent" style="max-width:220px">
+              <option value="anca">Anca — PM / general</option>
+              <option value="mu">Mu — Graphic Designer</option>
+              <option value="cipu">Cipu — Video Editor</option>
+              <option value="jaka">Jaka — QC Visual</option>
+              <option value="tono">Tono — Riset</option>
+              <option value="dani">Dani — Coding</option>
+            </select>
+            <button class="btn primary" id="q-add">+ Masukkan antrean</button>
+          </div>
+        </div>
+        <div class="h">Antrean <span class="pill blue" id="queue-badge" style="margin-left:6px">0 menunggu</span></div>
+        <div class="card" id="queue-list"><div class="muted small">Antrean kosong.</div></div>
+      </section>
+
+      <!-- 4. SYSTEM METRICS -->
+      <section class="view" id="view-metrics">
+        <div class="h">Metrik sistem — dari /proc, update tiap 3 dtk</div>
+        <div class="grid c3">
+          <div class="card"><div class="h">CPU Load</div><div class="tok-big mono" id="m-cpu1">—</div><div class="small muted">load 1 mnt</div><div class="bar" style="margin-top:10px"><i id="m-cpubar"></i></div><div class="tiny" style="margin-top:8px" id="m-cpu-detail">5 mnt: — • 15 mnt: —</div></div>
+          <div class="card"><div class="h">Memory (Container)</div><div class="tok-big mono" id="m-memc">—</div><div class="small muted">jumlah RSS semua proses di /proc</div><div class="bar" style="margin-top:10px"><i id="m-memc-bar" class="green"></i></div><div class="tiny" style="margin-top:8px" id="m-memh">host: —</div></div>
+          <div class="card"><div class="h">Uptime</div><div class="tok-big mono" id="m-uptime" style="font-size:26px">—</div><div class="small muted">sejak server/VPS boot (/proc/uptime)</div><div class="tiny" style="margin-top:14px">CPU: <span id="m-cpumodel" class="mono">—</span></div></div>
+        </div>
+      </section>
+
+      <!-- 5. VPS STATUS -->
+      <section class="view" id="view-vps">
+        <div class="h">Status VPS</div>
+        <div class="grid c3" id="vps-grid">
+          <div class="card"><div class="h">💽 Disk</div><div class="tok-big mono" id="v-disk-pct">—</div><div class="bar" style="margin:10px 0"><i id="v-disk-bar"></i></div><div class="small muted" id="v-disk-txt">—</div></div>
+          <div class="card"><div class="h">⚙ CPU</div><div style="font-weight:700" id="v-cpu-model">—</div><div class="small muted" style="margin-top:8px">load 1 mnt: <span class="mono" id="v-cpu-load">—</span></div></div>
+          <div class="card"><div class="h">🧠 Memory (Container)</div><div class="tok-big mono" id="v-mem">—</div><div class="tiny" style="margin-top:8px" id="v-mem-sub">—</div></div>
+          <div class="card"><div class="h">⏱ Uptime Server</div><div class="tok-big mono" style="font-size:26px" id="v-uptime">—</div></div>
+          <div class="card"><div class="h">🌐 Tunnel</div><div id="v-tunnel-badge"><span class="pill gray">—</span></div><div class="small" style="margin-top:10px;word-break:break-all"><a href="#" id="v-tunnel-url" target="_blank" rel="noopener" style="color:var(--accent)">—</a></div><div class="tiny" style="margin-top:6px">bore • dicek HTTP 200 tiap 30 dtk</div></div>
+          <div class="card"><div class="h">🖥 OS</div><div style="font-weight:700" id="v-os">—</div><div class="tiny" style="margin-top:8px">node <span class="mono" id="v-node">—</span></div></div>
+          <div class="card"><div class="h">🐕 Watchdog</div><div style="font-weight:700" id="v-wd-note">—</div><div class="tiny mono" style="margin-top:8px" id="v-wd-detail">—</div></div>
+        </div>
+      </section>
+
+      <!-- 6. TUGAS TERJADWAL -->
+      <section class="view" id="view-schedules">
+        <div class="h">Jadwal saya</div>
+        <div class="card" id="sched-mine"><div class="muted small">Memuat…</div></div>
+        <details class="sys card" style="margin-top:14px;padding-top:8px">
+          <summary><span class="chev">▶</span> Jadwal sistem <span class="pill gray" id="sched-sys-count" style="margin-left:4px">0</span></summary>
+          <div id="sched-system"></div>
+        </details>
+      </section>
+
+      <!-- 7. TOKEN STATUS -->
+      <section class="view" id="view-tokens">
+        <div class="h">Pemakaian token / batas paket</div>
+        <div class="card">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="tok-big mono" id="tok-pct">—</span><span class="muted" id="tok-label">memuat…</span></div>
+          <div class="bar" style="margin:14px 0"><i id="tok-bar"></i></div>
+          <div class="small muted" id="tok-reset">—</div>
+          <div class="tiny" style="margin-top:10px">Sumber: perintah <span class="mono">subscription-status status</span> (dibaca server tiap 5 mnt). Muse menghitung pemakaian terhadap jatah langganan, bukan saldo token eksak.</div>
+        </div>
+      </section>
+
+      <!-- 8. AGENT FLEET -->
+      <section class="view" id="view-fleet">
+        <div class="h">Armada agent</div>
+        <div class="grid c2" id="fleet-grid"></div>
+      </section>
+
+      <!-- 9. REAL-TIME LOG -->
+      <section class="view" id="view-log">
+        <div class="h">Tail log aktivitas <span class="tiny" style="text-transform:none;letter-spacing:0">— dari tasks.jsonl &amp; watchdog-history.jsonl</span></div>
+        <div id="log-lines"><span class="lt">Memuat…</span></div>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="vendor/three.min.js"></script>
+<script>
+/* =====================================================================
+   MISSION CONTROL — frontend (tanpa framework)
+   Polling GET /api/state tiap 3 detik. Semua angka = data nyata.
+   ===================================================================== */
+'use strict';
+const $ = id => document.getElementById(id);
+const state = { data: null, view: 'office', prevAgents: {}, seenDone: new Set() };
+/* MODE PANTAU (mirror publik): bila dibuka dari github.io / cdn.jsdelivr.net,
+   state diambil dari jsDelivr (di-push VM tiap 20 dtk), semua aksi tulis nonaktif. */
+const IS_LIVE = /\.github\.io$/.test(location.hostname) || /cdn\.jsdelivr\.net$/.test(location.hostname);
+const LIVE_STATE_URL = 'https://cdn.jsdelivr.net/gh/aivastudioindo/mission-control-live@main/state.json';
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtGB = b => b == null ? '—' : (b / 1073741824).toFixed(1) + ' GB';
+const fmtMB = b => b == null ? '—' : (b / 1048576).toFixed(0) + ' MB';
+function fmtWib(iso){ try{ return new Intl.DateTimeFormat('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Jakarta'}).format(new Date(iso)); }catch(e){ return iso; } }
+function ago(iso){ const d=Date.now()-new Date(iso).getTime(); if(d<0||isNaN(d))return'baru saja'; const m=Math.floor(d/60000); if(m<1)return'baru saja'; if(m<60)return m+' mnt lalu'; const h=Math.floor(m/60); if(h<24)return h+' jam lalu'; return Math.floor(h/24)+' hari lalu'; }
+function statusPill(s){ return s==='working'?'<span class="pill green"><span class="dot"></span>working</span>':s==='paused'?'<span class="pill amber"><span class="dot"></span>paused</span>':'<span class="pill gray"><span class="dot"></span>idle</span>'; }
+let toastTimer=null;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2200); }
+
+/* ---------------- Navigasi ---------------- */
+const TITLES = { office:'Virtual Office', overview:'Agent Overview', queue:'Task Queue', metrics:'System Metrics', vps:'VPS Status', schedules:'Tugas Terjadwal', tokens:'Token Status', fleet:'Agent Fleet', log:'Real-Time Log' };
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    state.view = btn.dataset.view;
+    $('view-' + state.view).classList.add('active');
+    $('page-title').textContent = TITLES[state.view];
+    document.body.classList.toggle('no-scroll', state.view === 'office' && window.innerWidth <= 860);
+    if (state.view === 'office' && window.__officeResize) window.__officeResize();
+    if (state.view === 'log') scrollLog(true);
+    render();
+  });
+});
+window.addEventListener('resize', () => {
+  document.body.classList.toggle('no-scroll', state.view === 'office' && window.innerWidth <= 860);
+  if (window.__officeResize) window.__officeResize();
+});
+
+/* ---------------- Polling ---------------- */
+async function poll() {
+  try {
+    const url = IS_LIVE ? LIVE_STATE_URL + '?cb=' + Date.now() : '/api/state';
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    state.data = d;
+    detectCheer(d);
+    render();
+    updateOffice(d);
+  } catch (e) { /* server down — biarkan tampilan terakhir */ }
+}
+function detectCheer(d) {
+  for (const a of d.agents || []) {
+    const prev = state.prevAgents[a.id];
+    if (prev === 'working' && a.status !== 'working' && window.__cheer) window.__cheer(a.id);
+    state.prevAgents[a.id] = a.status;
+  }
+}
+
+/* ---------------- Render ---------------- */
+function render() {
+  const d = state.data;
+  if (!d) return;
+  renderTopbar(d);
+  renderOverview(d);
+  renderQueue(d);
+  renderMetrics(d);
+  renderVps(d);
+  renderSchedules(d);
+  renderTokens(d);
+  renderFleet(d);
+  renderLog(d);
+}
+
+function renderTopbar(d) {
+  const tb = $('tunnel-badge');
+  if (IS_LIVE) { tb.style.display = 'none'; $('live-badge').style.display = 'inline-flex'; $('dispatch-btn').disabled = true; $('dispatch-btn').style.opacity = .45; return; }
+  if (d.vps.tunnel_url) {
+    tb.href = d.vps.tunnel_url;
+    $('tunnel-url').textContent = d.vps.tunnel_url.replace(/^https?:\/\//, '');
+    tb.classList.toggle('online', !!d.vps.tunnel_online);
+  } else {
+    tb.removeAttribute('href');
+    $('tunnel-url').textContent = 'tunnel: belum ada';
+    tb.classList.remove('online');
+  }
+  const b = $('dispatch-btn');
+  if (d.dispatch_paused) { b.innerHTML = '▶ Resume dispatch'; b.classList.add('danger-glow'); }
+  else { b.innerHTML = '⏸ Pause dispatch'; b.classList.remove('danger-glow'); }
+}
+$('dispatch-btn').addEventListener('click', async () => {
+  if (IS_LIVE) { toast('Mode pantau: kontrol hanya dari jaringan lokal'); return; }
+  const paused = !(state.data && state.data.dispatch_paused);
+  const r = await fetch('/api/dispatch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paused }) });
+  if (r.ok) { toast(paused ? 'Dispatch di-PAUSE — antrean ditahan' : 'Dispatch di-RESUME'); poll(); }
+});
+setInterval(() => {
+  try {
+    $('clock').textContent = new Intl.DateTimeFormat('id-ID', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Jakarta' }).format(new Date()) + ' WIB';
+  } catch (e) {}
+}, 1000);
+
+function renderOverview(d) {
+  $('agent-cards').innerHTML = d.agents.map(a => `
+    <div class="card agent-card">
+      <div class="agent-avatar" style="background:${a.accent}">${esc(a.name[0])}</div>
+      <div class="grow">
+        <div class="agent-name">${esc(a.name)} ${statusPill(a.status)}</div>
+        <div class="agent-role">${esc(a.role)} • <span class="mono">${esc(a.id)}</span></div>
+        ${a.task ? `<div class="agent-task"><b>${esc(a.task.title)}</b><br><span class="tiny mono">${esc(a.task.task_id || '')} • mulai ${fmtWib(a.task.started_ts)}</span>${a.task.detail ? '<br>' + esc(a.task.detail) : ''}</div>` : '<div class="tiny" style="margin-top:8px">Tidak ada task aktif.</div>'}
+      </div>
+    </div>`).join('');
+}
+
+function renderQueue(d) {
+  const pending = d.queue_pending || 0;
+  const badge = $('queue-count');
+  badge.style.display = pending ? 'flex' : 'none';
+  badge.textContent = pending;
+  $('queue-badge').textContent = pending + ' menunggu';
+  const items = (d.queue || []).slice().reverse();
+  $('queue-list').innerHTML = items.length ? items.map(q => `
+    <div class="queue-item">
+      <div class="grow">
+        <div style="font-weight:600">${esc(q.prompt)}</div>
+        <div class="tiny" style="margin-top:4px"><span class="pill blue" style="font-size:10px">${esc(q.agent)}</span> <span class="mono">${fmtWib(q.ts)}</span></div>
+      </div>
+      ${q.status === 'queued' ? '<span class="pill amber">queued</span>' : '<span class="pill green">done</span>'}
+    </div>`).join('') : '<div class="muted small">Antrean kosong.</div>';
+}
+document.querySelectorAll('.quick-btn').forEach(b => b.addEventListener('click', () => { $('q-agent').value = b.dataset.agent; $('q-prompt').focus(); }));
+$('q-add').addEventListener('click', async () => {
+  if (IS_LIVE) { toast('Mode pantau: tambah antrean hanya dari jaringan lokal'); return; }
+  const prompt = $('q-prompt').value.trim(), agent = $('q-agent').value;
+  if (!prompt) { toast('Isi dulu prompt tugasnya'); return; }
+  const r = await fetch('/api/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, agent }) });
+  const j = await r.json().catch(() => ({}));
+  if (r.ok) { $('q-prompt').value = ''; toast('Masuk antrean ✓'); poll(); }
+  else toast('Gagal: ' + (j.error || r.status));
+});
+
+function renderMetrics(d) {
+  const s = d.system;
+  $('m-cpu1').textContent = s.cpu_load_1 == null ? '—' : s.cpu_load_1.toFixed(2);
+  $('m-cpu-detail').textContent = `5 mnt: ${s.cpu_load_5 == null ? '—' : s.cpu_load_5.toFixed(2)} • 15 mnt: ${s.cpu_load_15 == null ? '—' : s.cpu_load_15.toFixed(2)}`;
+  const cpub = $('m-cpubar');
+  cpub.style.width = Math.min(100, (s.cpu_load_1 || 0) / 4 * 100) + '%';
+  cpub.className = (s.cpu_load_1 || 0) >= 3 ? 'red' : (s.cpu_load_1 || 0) >= 1.5 ? 'amber' : '';
+  $('m-memc').textContent = fmtMB(s.mem_container_bytes);
+  $('m-memh').textContent = `host: ${fmtGB((s.mem_host_total_bytes || 0) - (s.mem_host_avail_bytes || 0))} / ${fmtGB(s.mem_host_total_bytes)} (di luar kendali)`;
+  const mb = $('m-memc-bar');
+  const mpct = s.mem_host_total_bytes ? s.mem_container_bytes / s.mem_host_total_bytes * 100 : 0;
+  mb.style.width = Math.min(100, mpct) + '%';
+  $('m-uptime').textContent = s.uptime_sec == null ? '—' : fmtDur(s.uptime_sec);
+  $('m-cpumodel').textContent = d.vps.cpu_model || '—';
+}
+function fmtDur(sec) {
+  sec = Math.floor(sec);
+  const dd = Math.floor(sec / 86400), hh = Math.floor(sec % 86400 / 3600), mm = Math.floor(sec % 3600 / 60);
+  return dd > 0 ? `${dd}h ${hh}j ${mm}m` : hh > 0 ? `${hh}j ${mm}m` : `${mm}m`;
+}
+
+function renderVps(d) {
+  const v = d.vps, s = d.system, disk = v.disk || {};
+  $('v-disk-pct').textContent = disk.pct == null ? '—' : disk.pct + '%';
+  const db = $('v-disk-bar');
+  db.style.width = (disk.pct || 0) + '%';
+  db.className = (disk.pct || 0) >= 90 ? 'red' : (disk.pct || 0) >= 75 ? 'amber' : 'green';
+  $('v-disk-txt').textContent = `${fmtGB(disk.used_bytes)} terpakai dari ${fmtGB(disk.total_bytes)}`;
+  $('v-cpu-model').textContent = v.cpu_model || '—';
+  $('v-cpu-load').textContent = s.cpu_load_1 == null ? '—' : s.cpu_load_1.toFixed(2);
+  $('v-mem').textContent = fmtMB(s.mem_container_bytes);
+  $('v-mem-sub').textContent = `container kita • host: ${fmtGB((s.mem_host_total_bytes || 0) - (s.mem_host_avail_bytes || 0))} / ${fmtGB(s.mem_host_total_bytes)} (di luar kendali)`;
+  $('v-uptime').textContent = s.uptime_sec == null ? '—' : fmtDur(s.uptime_sec);
+  const on = v.tunnel_online;
+  $('v-tunnel-badge').innerHTML = v.tunnel_url
+    ? `<span class="pill ${on ? 'green' : 'red'}"><span class="dot"></span>${on ? 'ONLINE' : 'OFFLINE'}</span>`
+    : '<span class="pill gray">belum ada tunnel</span>';
+  const tu = $('v-tunnel-url');
+  tu.textContent = v.tunnel_url || '—';
+  if (v.tunnel_url) tu.href = v.tunnel_url; else tu.removeAttribute('href');
+  $('v-os').textContent = v.os || '—';
+  $('v-wd-note').textContent = (v.watchdog && v.watchdog.note) || '—';
+  const wl = v.watchdog && v.watchdog.last;
+  $('v-wd-detail').textContent = wl ? `${wl.ts || ''} • ${wl.url || ''}` : 'watchdog-history.jsonl kosong';
+}
+
+function renderSchedules(d) {
+  const mine = (d.schedules || []).filter(s => !s.is_system);
+  const sys = (d.schedules || []).filter(s => s.is_system);
+  const row = s => `
+    <div class="sched-row">
+      <div class="grow" style="flex:1;min-width:0">
+        <div style="font-weight:600">${esc(s.title)}</div>
+        <div class="tiny mono">${esc(s.id)}${s.owner ? ' • ' + esc(s.owner) : ''}</div>
+        <div class="small muted" style="margin-top:3px">${esc(s.label)}${s.next_iso ? ' • berikutnya: <b>' + esc(fmtWib(s.next_iso)) + '</b> <span class="tiny">(' + esc(ago(s.next_iso)) + ')</span>' : ''}</div>
+      </div>
+      ${s.enabled ? '<span class="pill green">ON</span>' : '<span class="pill gray">OFF</span>'}
+    </div>`;
+  $('sched-mine').innerHTML = mine.length ? mine.map(row).join('') : '<div class="muted small">Tidak ada jadwal.</div>';
+  $('sched-system').innerHTML = sys.length ? sys.map(row).join('') : '<div class="muted small">Tidak ada.</div>';
+  $('sched-sys-count').textContent = sys.length;
+}
+
+function renderTokens(d) {
+  const t = d.subscription || {};
+  if (!t.ok) { $('tok-label').textContent = 'perintah subscription-status tidak tersedia'; return; }
+  $('tok-label').textContent = t.has_subscription ? 'paket berlangganan' : 'paket gratis (tanpa langganan)';
+  $('tok-pct').textContent = t.usage_percent == null ? '—' : t.usage_percent + '%';
+  const bar = $('tok-bar');
+  bar.style.width = (t.usage_percent || 0) + '%';
+  bar.className = (t.usage_percent || 0) >= 90 ? 'red' : (t.usage_percent || 0) >= 70 ? 'amber' : 'green';
+  $('tok-reset').textContent = t.reset_text ? 'Jatah mingguan reset: ' + t.reset_text : (t.summary || '');
+}
+
+const FLEET_CAPS = {
+  anca: ['Koordinasi & delegasi task ke agent lain', 'Monitoring progres & status fleet', 'Penjadwalan dan prioritas kerja'],
+  mu: ['Desain grafis & layout', 'Ilustrasi dan aset visual', 'Mockup & presentasi desain'],
+  cipu: ['Editing & cutting video', 'Color grading dasar', 'Subtitle & render'],
+  jaka: ['Quality control visual', 'Review hasil desain & video', 'Deteksi inkonsistensi / artefak'],
+  tono: ['Riset web & kompetitor', 'Pengumpulan data & fakta', 'Verifikasi sumber'],
+  dani: ['Coding & scripting', 'Debug & testing', 'Automasi & integrasi API'],
+};
+function renderFleet(d) {
+  $('fleet-grid').innerHTML = d.agents.map(a => `
+    <div class="card agent-card">
+      <div class="agent-avatar" style="background:${a.accent}">${esc(a.name[0])}</div>
+      <div class="grow">
+        <div class="agent-name">${esc(a.name)} ${statusPill(a.status)}</div>
+        <div class="agent-role">${esc(a.role)} • <span class="mono">${esc(a.id)}</span></div>
+        <ul class="fleet-cap">${(FLEET_CAPS[a.id] || []).map(c => '<li>' + esc(c) + '</li>').join('')}</ul>
+      </div>
+    </div>`).join('');
+}
+
+function renderLog(d) {
+  const box = $('log-lines');
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  box.innerHTML = (d.log || []).map(l =>
+    `<div><span class="lt">${esc(String(l.ts || '').slice(11, 19))}</span> <span class="src-${esc(l.source)}">[${esc(l.source)}]</span> ${esc(l.text.replace(/^\[[^\]]+\]\s*/, ''))}</div>`
+  ).join('') || '<span class="lt">Log kosong.</span>';
+  if (nearBottom || state.view !== 'log') box.scrollTop = box.scrollHeight;
+}
+function scrollLog(force) { const b = $('log-lines'); if (b && (force || true)) b.scrollTop = b.scrollHeight; }
+
+poll();
+setInterval(poll, 3000);
+
+/* =====================================================================
+   VIRTUAL OFFICE — scene 3D (Three.js r128, vendored lokal)
+   ===================================================================== */
+const ROSTER3D = [
+  { id:'anca', name:'Anca', css:'#8b9bb4', hex:0x8b9bb4 },
+  { id:'mu',   name:'Mu',   css:'#9b7ede', hex:0x9b7ede },
+  { id:'cipu', name:'Cipu', css:'#e05d5d', hex:0xe05d5d },
+  { id:'jaka', name:'Jaka', css:'#5db4e0', hex:0x5db4e0 },
+  { id:'tono', name:'Tono', css:'#7ed492', hex:0x7ed492 },
+  { id:'dani', name:'Dani', css:'#e0b45d', hex:0xe0b45d },
+];
+const office = { robots: {}, hit: [], codeScreens: [], chartScreens: [], ready: false };
+
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d'); draw(ctx, w, h);
+  const tex = new THREE.CanvasTexture(c);
+  return { tex, canvas: c, ctx };
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+function initOffice() {
+  if (office.ready || typeof THREE === 'undefined') {
+    if (typeof THREE === 'undefined') $('scene3d').innerHTML = '<div class="card" style="margin:40px">Three.js gagal dimuat (vendor/three.min.js).</div>';
+    return;
+  }
+  const container = $('scene3d');
+  const W = () => container.clientWidth, H = () => container.clientHeight;
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a0c);
+  scene.fog = new THREE.Fog(0x0a0a0c, 20, 38);
+  const camera = new THREE.PerspectiveCamera(52, W() / H(), 0.1, 100);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(W(), H());
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  container.appendChild(renderer.domElement);
+
+  /* ----- Lampu ----- */
+  scene.add(new THREE.AmbientLight(0x8a8fa8, 0.55));
+  const winLight = new THREE.DirectionalLight(0x6f86c9, 0.5);
+  winLight.position.set(0, 4, -10); scene.add(winLight);
+  [[-4.6, -2.6], [0, -2.6], [4.6, -2.6]].forEach(([x, z]) => {
+    const p = new THREE.PointLight(0xffd9a0, 0.85, 9);
+    p.position.set(x, 3.6, z); scene.add(p);
+  });
+  const fill = new THREE.PointLight(0x7c8cf8, 0.35, 20);
+  fill.position.set(0, 4, 6); scene.add(fill);
+
+  /* ----- Ruangan ----- */
+  const mat = (c, r = 0.9) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: 0.08 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(19, 15), mat(0x14151a, 0.95));
+  floor.rotation.x = -Math.PI / 2; scene.add(floor);
+  const wallMat = mat(0x191b23, 0.95);
+  const backWall = new THREE.Mesh(new THREE.PlaneGeometry(19, 5.5), wallMat);
+  backWall.position.set(0, 2.75, -7); scene.add(backWall);
+  const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(15, 5.5), wallMat);
+  leftWall.rotation.y = Math.PI / 2; leftWall.position.set(-9.5, 2.75, 0); scene.add(leftWall);
+  const rightWall = leftWall.clone(); rightWall.rotation.y = -Math.PI / 2; rightWall.position.x = 9.5; scene.add(rightWall);
+
+  /* ----- Jendela kota malam ----- */
+  const city = canvasTex(512, 256, (ctx, w, h) => {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#070b1d'); g.addColorStop(1, '#16204a');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#f4f1de'; ctx.beginPath(); ctx.arc(430, 42, 16, 0, 7); ctx.fill();
+    for (let i = 0; i < 14; i++) {
+      const bw = 24 + Math.random() * 40, bh = 60 + Math.random() * 130, bx = i * 38 - 10, by = h - bh;
+      ctx.fillStyle = '#0c0f1c'; ctx.fillRect(bx, by, bw, bh);
+      for (let wy = by + 8; wy < h - 8; wy += 12) for (let wx = bx + 5; wx < bx + bw - 6; wx += 10) {
+        if (Math.random() < 0.35) { ctx.fillStyle = Math.random() < 0.7 ? '#ffd97a' : '#9fd0ff'; ctx.fillRect(wx, wy, 5, 7); }
+      }
+    }
+  });
+  const winFrame = new THREE.Mesh(new THREE.BoxGeometry(9.2, 3.1, 0.18), mat(0x23252e, 0.7));
+  winFrame.position.set(0, 2.7, -6.95); scene.add(winFrame);
+  const winGlass = new THREE.Mesh(new THREE.PlaneGeometry(8.6, 2.55), new THREE.MeshBasicMaterial({ map: city.tex }));
+  winGlass.position.set(0, 2.7, -6.84); scene.add(winGlass);
+  // tiang jendela
+  for (const fx of [-2.15, 0, 2.15]) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.09, 2.55, 0.05), mat(0x23252e, 0.7));
+    bar.position.set(fx, 2.7, -6.82); scene.add(bar);
+  }
+
+  /* ----- Meja + monitor + kursi ----- */
+  const deskMat = mat(0x2a2c36, 0.6), deskEdge = mat(0x3a3d49, 0.5);
+  const codeColors = ['#7c8cf8', '#34d399', '#e0b45d', '#e05d5d', '#5db4e0', '#a1a1aa'];
+  function makeCodeScreen() {
+    const lines = [];
+    for (let i = 0; i < 11; i++) lines.push({ indent: Math.floor(Math.random() * 5), w: 0.25 + Math.random() * 0.65, c: codeColors[i % codeColors.length] });
+    const { tex, ctx, canvas } = canvasTex(256, 160, () => {});
+    const draw = () => {
+      ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, 256, 160);
+      ctx.fillStyle = '#161b22'; ctx.fillRect(0, 0, 256, 18);
+      ['#f31260', '#f5a524', '#34d399'].forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(12 + i * 12, 9, 4, 0, 7); ctx.fill(); });
+      lines.forEach((l, i) => {
+        const y = 28 + i * 11.5;
+        ctx.fillStyle = l.c; ctx.globalAlpha = 0.85;
+        roundRect(ctx, 12 + l.indent * 12, y, l.w * 150, 6, 3); ctx.fill(); ctx.globalAlpha = 1;
+      });
+      tex.needsUpdate = true;
+    };
+    draw();
+    const scr = { tex, shift() { lines.shift(); lines.push({ indent: Math.floor(Math.random() * 5), w: 0.25 + Math.random() * 0.65, c: codeColors[Math.floor(Math.random() * codeColors.length)] }); draw(); } };
+    office.codeScreens.push(scr);
+    return tex;
+  }
+  function makeChartScreen() {
+    const data = []; for (let i = 0; i < 42; i++) data.push(0.5 + Math.random() * 0.2);
+    const { tex, ctx } = canvasTex(256, 160, () => {});
+    const draw = () => {
+      ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, 256, 160);
+      ctx.strokeStyle = 'rgba(255,255,255,.06)';
+      for (let gy = 20; gy < 160; gy += 28) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(256, gy); ctx.stroke(); }
+      const grad = ctx.createLinearGradient(0, 20, 0, 160);
+      grad.addColorStop(0, 'rgba(124,140,248,.45)'); grad.addColorStop(1, 'rgba(124,140,248,0)');
+      ctx.beginPath(); ctx.moveTo(0, 160);
+      data.forEach((v, i) => ctx.lineTo(i / (data.length - 1) * 256, 160 - v * 130));
+      ctx.lineTo(256, 160); ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+      ctx.beginPath();
+      data.forEach((v, i) => { const x = i / (data.length - 1) * 256, y = 160 - v * 130; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.strokeStyle = '#7c8cf8'; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.fillStyle = '#a1a1aa'; ctx.font = '11px monospace'; ctx.fillText('fleet load', 10, 16);
+      tex.needsUpdate = true;
+    };
+    draw();
+    const scr = { tex, shift() { data.shift(); const l = data[data.length - 1]; data.push(Math.min(0.95, Math.max(0.08, l + (Math.random() - 0.5) * 0.22))); draw(); } };
+    office.chartScreens.push(scr);
+    return tex;
+  }
+  function makeMonitor(tex, x, z) {
+    const g = new THREE.Group();
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.06, 0.64), new THREE.MeshBasicMaterial({ map: tex }));
+    scr.position.y = 1.38; g.add(scr);
+    const bezel = new THREE.Mesh(new THREE.BoxGeometry(1.14, 0.72, 0.05), mat(0x101114, 0.5));
+    bezel.position.set(0, 1.38, -0.035); g.add(bezel);
+    const neck = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.42, 0.09), mat(0x23252e, 0.6));
+    neck.position.y = 1.0; g.add(neck);
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.32), mat(0x23252e, 0.6));
+    base.position.y = 0.8; g.add(base);
+    g.position.set(x, 0, z);
+    g.rotation.y = -0.12 * Math.sign(x || 1) * -1;
+    return g;
+  }
+  function makeChair(x, z) {
+    const g = new THREE.Group(); const cm = mat(0x23242c, 0.7);
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.09, 0.56), cm); seat.position.y = 0.52; g.add(seat);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.62, 0.09), cm); back.position.set(0, 0.95, -0.28); g.add(back);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.5, 10), cm); pole.position.y = 0.26; g.add(pole);
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 0.05, 14), cm); disc.position.y = 0.03; g.add(disc);
+    g.position.set(x, 0, z); g.rotation.y = Math.PI;
+    return g;
+  }
+  const SEATS = [], DESKS = [-4.6, 0, 4.6];
+  for (const dx of DESKS) {
+    const top = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.1, 1.5), deskMat);
+    top.position.set(dx, 0.78, -2.6); scene.add(top);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.03, 0.06), new THREE.MeshBasicMaterial({ color: 0x7c8cf8 }));
+    strip.position.set(dx, 0.72, -1.86); scene.add(strip);
+    for (const [lx, lz] of [[-1.7, -0.65], [1.7, -0.65], [-1.7, 0.65], [1.7, 0.65]]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.74, 0.09), deskEdge);
+      leg.position.set(dx + lx, 0.37, -2.6 + lz); scene.add(leg);
+    }
+    for (const sx of [-0.95, 0.95]) {
+      const mon1 = makeMonitor(makeCodeScreen(), dx + sx - 0.3, -2.95);
+      const mon2 = makeMonitor(makeChartScreen(), dx + sx + 0.42, -2.95);
+      mon2.rotation.y = 0.35;
+      scene.add(mon1, mon2);
+      const kb = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.03, 0.22), mat(0x1d1e24, 0.6));
+      kb.position.set(dx + sx, 0.85, -2.25); scene.add(kb);
+      scene.add(makeChair(dx + sx, -1.35));
+      SEATS.push({ x: dx + sx, z: -1.32, ry: Math.PI });
+    }
+  }
+  office.seats = SEATS;
+  office.backRow = [-6.5, -3.9, -1.3, 1.3, 3.9, 6.5].map(x => ({ x, z: 3.7, ry: 0.15 * (x > 0 ? -1 : 1) }));
+
+  /* ----- Tanaman & lampu status ----- */
+  const plant = new THREE.Group();
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.4, 14), mat(0x3a2f28, 0.8));
+  pot.position.y = 0.2; plant.add(pot);
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f7d44, roughness: 0.9 });
+  [[0, 0.75, 0, 0.3], [0.18, 0.62, 0.1, 0.22], [-0.16, 0.66, -0.08, 0.24]].forEach(([x, y, z, r]) => {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 10), leafMat);
+    s.position.set(x, y, z); s.scale.y = 1.35; plant.add(s);
+  });
+  plant.position.set(7.8, 0, -5.6); scene.add(plant);
+  [[0x34d399, -3], [0xf5a524, -2.82], [0x7c8cf8, -2.64]].forEach(([c, x]) => {
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), new THREE.MeshBasicMaterial({ color: c }));
+    lamp.position.set(x, 4.4, -6.9); scene.add(lamp);
+  });
+
+  /* ----- Robot ----- */
+  ROSTER3D.forEach((r, i) => office.robots[r.id] = makeRobot(r, i, scene));
+
+  /* ----- Kontrol kamera: drag putar + scroll zoom (tanpa OrbitControls) ----- */
+  const cam = { tx: 0, ty: 1.15, tz: -0.6, r: 11.5, theta: 0, phi: 1.08 };
+  const pointers = new Map(); let pinchD = 0, moved = 0, downPos = null;
+  const el = renderer.domElement;
+  el.addEventListener('pointerdown', e => { pointers.set(e.pointerId, [e.clientX, e.clientY]); el.setPointerCapture(e.pointerId); if (pointers.size === 2) { const p = [...pointers.values()]; pinchD = Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]); } moved = 0; downPos = [e.clientX, e.clientY]; });
+  el.addEventListener('pointermove', e => {
+    if (!pointers.has(e.pointerId)) return;
+    const prev = pointers.get(e.pointerId);
+    const dx = e.clientX - prev[0], dy = e.clientY - prev[1];
+    pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    moved += Math.abs(dx) + Math.abs(dy);
+    if (pointers.size === 1) {
+      cam.theta -= dx * 0.005;
+      cam.phi = Math.min(1.45, Math.max(0.35, cam.phi - dy * 0.004));
+    } else if (pointers.size === 2) {
+      const p = [...pointers.values()];
+      const d = Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]);
+      cam.r = Math.min(22, Math.max(5, cam.r - (d - pinchD) * 0.03));
+      pinchD = d;
+    }
+  });
+  const release = e => {
+    pointers.delete(e.pointerId);
+    if (downPos && moved < 8) handleTap(e.clientX, e.clientY);
+    downPos = null;
+  };
+  el.addEventListener('pointerup', release);
+  el.addEventListener('pointercancel', e => pointers.delete(e.pointerId));
+  el.addEventListener('wheel', e => { e.preventDefault(); cam.r = Math.min(22, Math.max(5, cam.r + e.deltaY * 0.01)); }, { passive: false });
+  function applyCam() {
+    const sp = Math.sin(cam.phi), x = cam.tx + cam.r * sp * Math.sin(cam.theta), y = cam.ty + cam.r * Math.cos(cam.phi), z = cam.tz + cam.r * sp * Math.cos(cam.theta);
+    camera.position.set(x, y, z); camera.lookAt(cam.tx, cam.ty, cam.tz);
+  }
+
+  /* ----- Klik robot = pause/resume ----- */
+  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+  function handleTap(cx, cy) {
+    if (IS_LIVE) { toast('Mode pantau: klik-pause hanya dari jaringan lokal'); return; }
+    const rect = el.getBoundingClientRect();
+    mouse.x = ((cx - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((cy - rect.top) / rect.height) * 2 + 1;
+    ray.setFromCamera(mouse, camera);
+    const hits = ray.intersectObjects(office.hit, false);
+    if (!hits.length) return;
+    const id = hits[0].object.userData.agentId;
+    const cur = (state.data && state.data.agents.find(a => a.id === id));
+    const paused = !(cur && cur.status === 'paused');
+    fetch('/api/agent-pause', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent: id, paused }) })
+      .then(r => r.json()).then(() => { toast((cur ? cur.name : id) + (paused ? ' di-pause ⏸' : ' di-resume ▶')); poll(); });
+  }
+
+  /* ----- Animasi monitor ----- */
+  setInterval(() => office.codeScreens.forEach((s, i) => { if (i % 2 === 0) s.shift(); }), 700);
+  setInterval(() => office.codeScreens.forEach((s, i) => { if (i % 2 === 1) s.shift(); }), 1100);
+  setInterval(() => office.chartScreens.forEach((s, i) => { if (i % 2 === 0) s.shift(); }), 900);
+  setInterval(() => office.chartScreens.forEach((s, i) => { if (i % 2 === 1) s.shift(); }), 1400);
+
+  /* ----- Loop ----- */
+  const clock = new THREE.Clock();
+  (function loop() {
+    requestAnimationFrame(loop);
+    const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+    applyCam();
+    for (const id in office.robots) animateRobot(office.robots[id], dt, t);
+    renderer.render(scene, camera);
+  })();
+
+  window.__officeResize = () => { camera.aspect = W() / H(); camera.updateProjectionMatrix(); renderer.setSize(W(), H()); };
+  window.__cheer = id => { const r = office.robots[id]; if (r) r.userData.cheerT = 0.001; };
+  office.ready = true;
+}
+
+/* ---------------- Robot builder ---------------- */
+function makeLabel(name, css) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = 'rgba(8,8,10,.78)';
+  roundRect(ctx, 4, 6, 248, 52, 26); ctx.fill();
+  ctx.strokeStyle = css; ctx.lineWidth = 3;
+  roundRect(ctx, 4, 6, 248, 52, 26); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 30px -apple-system,Segoe UI,sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(name, 128, 34);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  sp.scale.set(1.7, 0.425, 1); sp.position.y = 1.55;
+  return sp;
+}
+
+function makeRobot(r, idx, scene) {
+  const std = (c, rough = 0.55, metal = 0.25) => new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: metal });
+  const root = new THREE.Group();
+  const body = new THREE.Group(); root.add(body);
+  const dark = std(0x2a2c34, 0.6, 0.3);
+
+  // kaki
+  for (const sx of [-0.11, 0.11]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.085, 0.36, 10), dark);
+    leg.position.set(sx, 0.18, 0); body.add(leg);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.07, 0.24), dark);
+    foot.position.set(sx, 0.035, 0.04); body.add(foot);
+  }
+  // torso
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.52, 0.3), std(r.hex, 0.5, 0.35));
+  torso.position.y = 0.62; body.add(torso);
+  const chest = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.06), new THREE.MeshBasicMaterial({ color: new THREE.Color(r.css) }));
+  chest.position.set(0, 0.7, 0.155); body.add(chest);
+  // kepala
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.21, 20, 16), std(r.hex, 0.45, 0.35));
+  head.position.y = 1.06; body.add(head);
+  // mata
+  const eyes = [];
+  const eyeGeo = new THREE.PlaneGeometry(0.075, 0.105);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  if (r.id === 'jaka') {
+    const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(-0.085, 1.08, 0.185); body.add(eL); eyes.push(eL);
+    const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.07, 18), std(0x14151a, 0.4, 0.6));
+    lens.rotation.x = Math.PI / 2; lens.position.set(0.085, 1.08, 0.18); body.add(lens);
+    const glass = new THREE.Mesh(new THREE.CircleGeometry(0.05, 18), new THREE.MeshBasicMaterial({ color: 0x7cdeff }));
+    glass.position.set(0.085, 1.08, 0.218); body.add(glass);
+  } else {
+    for (const sx of [-0.085, 0.085]) {
+      const e = new THREE.Mesh(eyeGeo, eyeMat); e.position.set(sx, 1.08, 0.185); body.add(e); eyes.push(e);
+    }
+  }
+  // lengan (pivot di bahu)
+  function arm(sx) {
+    const pivot = new THREE.Group(); pivot.position.set(sx * 0.29, 0.84, 0); body.add(pivot);
+    const a = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.05, 0.42, 10), dark);
+    a.position.y = -0.21; pivot.add(a);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 10), std(0x3a3d47, 0.5, 0.4));
+    hand.position.y = -0.44; pivot.add(hand);
+    return pivot;
+  }
+  const armL = arm(-1), armR = arm(1);
+
+  /* ----- Aksesori per peran ----- */
+  if (r.id === 'mu') {
+    const beret = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.07, 16), std(0x9b7ede, 0.7, 0.1));
+    beret.position.set(-0.07, 1.25, 0); beret.rotation.z = 0.28; body.add(beret);
+    const stylus = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.3, 8), std(0x14151a, 0.4, 0.5));
+    stylus.position.set(0, -0.5, 0.08); stylus.rotation.x = 0.5; armR.add(stylus);
+    const tablet = new THREE.Group();
+    const tb = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.025, 0.27), std(0x1d1e24, 0.5, 0.3)); tablet.add(tb);
+    const ts = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.21), new THREE.MeshBasicMaterial({ color: 0x2b3a5e }));
+    ts.rotation.x = -Math.PI / 2; ts.position.y = 0.014; tablet.add(ts);
+    tablet.position.set(0, 0.52, 0.3); tablet.rotation.x = -0.35; body.add(tablet);
+  }
+  if (r.id === 'cipu') {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.215, 0.038, 10, 20, Math.PI), std(0x23242c, 0.5, 0.4));
+    band.position.y = 1.07; body.add(band);
+    for (const sx of [-0.215, 0.215]) {
+      const cup = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.13), std(0x23242c, 0.5, 0.4));
+      cup.position.set(sx, 1.05, 0); body.add(cup);
+    }
+    const rec = new THREE.Mesh(new THREE.SphereGeometry(0.038, 10, 10), new THREE.MeshBasicMaterial({ color: 0xff2b2b }));
+    rec.position.set(0.15, 1.22, 0.1); body.add(rec);
+    chest.material = new THREE.MeshBasicMaterial({ color: 0xff2b2b });
+  }
+  if (r.id === 'tono') {
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.32, 8), dark);
+    ant.position.set(0.12, 1.32, 0); body.add(ant);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 10), new THREE.MeshBasicMaterial({ color: 0x7ed492 }));
+    tip.position.set(0.12, 1.49, 0); body.add(tip);
+    const mag = new THREE.Group();
+    const ringM = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.016, 8, 20), std(0x8a6f3f, 0.4, 0.7)); mag.add(ringM);
+    const glassM = new THREE.Mesh(new THREE.CircleGeometry(0.085, 20), new THREE.MeshBasicMaterial({ color: 0xbfe3ff, transparent: true, opacity: 0.45 }));
+    glassM.position.z = 0.001; mag.add(glassM);
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.16, 8), dark);
+    handle.position.y = -0.16; mag.add(handle);
+    mag.position.set(0, -0.52, 0.05); armR.add(mag);
+  }
+  if (r.id === 'dani') {
+    const kc = document.createElement('canvas'); kc.width = 128; kc.height = 48;
+    const kx = kc.getContext('2d');
+    kx.fillStyle = '#1d1e24'; kx.fillRect(0, 0, 128, 48);
+    kx.fillStyle = '#3d3f4d';
+    for (let row = 0; row < 3; row++) for (let col = 0; col < 10; col++) kx.fillRect(4 + col * 12.2, 5 + row * 14, 10, 11);
+    const kb = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.03, 0.2),
+      new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(kc), roughness: 0.6 }));
+    kb.position.set(0, 0.66, 0.42); kb.rotation.x = -0.18; body.add(kb);
+  }
+
+  // label nama
+  root.add(makeLabel(r.name, r.css));
+  // ring status
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.44, 32),
+    new THREE.MeshBasicMaterial({ color: 0x6b7280, transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; root.add(ring);
+  // hitbox klik (invisible)
+  const hit = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.7, 8),
+    new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.y = 0.85; hit.userData.agentId = r.id; root.add(hit);
+  office.hit.push(hit);
+
+  const spot = office.backRow[idx];
+  root.position.set(spot.x, 0, spot.z);
+  root.rotation.y = spot.ry;
+  scene.add(root);
+  root.userData = {
+    agentId: r.id, body, head, eyes, armL, armR, ring,
+    phase: idx * 1.7, blinkT: 1 + Math.random() * 3, blinkP: -1, cheerT: 0,
+    status: 'idle', tx: spot.x, tz: spot.z, try_: spot.ry,
+  };
+  return root;
+}
+
+function lerpAngle(a, b, k) {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return a + d * k;
+}
+
+function animateRobot(root, dt, t) {
+  const u = root.userData;
+  // transisi posisi smooth
+  const kp = 1 - Math.exp(-3.2 * dt), kr = 1 - Math.exp(-4 * dt);
+  root.position.x += (u.tx - root.position.x) * kp;
+  root.position.z += (u.tz - root.position.z) * kp;
+  root.rotation.y = lerpAngle(root.rotation.y, u.try_, kr);
+  // idle sway + napas
+  u.body.rotation.z = Math.sin(t * 1.3 + u.phase) * 0.032;
+  u.body.position.y = Math.sin(t * 2 + u.phase) * 0.014;
+  // kedip mata
+  u.blinkT -= dt;
+  if (u.blinkT <= 0 && u.blinkP < 0) u.blinkP = 0;
+  if (u.blinkP >= 0) {
+    u.blinkP += dt / 0.16;
+    const s = u.blinkP >= 1 ? 1 : 1 - Math.sin(Math.min(u.blinkP, 1) * Math.PI) * 0.92;
+    u.eyes.forEach(e => e.scale.y = s);
+    if (u.blinkP >= 1) { u.blinkP = -1; u.blinkT = 2 + Math.random() * 3.5; }
+  }
+  const working = u.status === 'working';
+  // animasi kerja
+  if (working && u.agentId === 'mu') {
+    u.armR.rotation.x = -0.85 + Math.sin(t * 4.5 + u.phase) * 0.26;
+    u.armR.rotation.z = -0.25 + Math.cos(t * 4.5 + u.phase) * 0.26;
+    u.armL.rotation.x += (-0.3 - u.armL.rotation.x) * kp;
+  } else if (working) {
+    u.armL.rotation.x = -0.75 + Math.sin(t * 9 + u.phase) * 0.22;
+    u.armR.rotation.x = -0.75 + Math.sin(t * 9 + u.phase + Math.PI) * 0.22;
+    u.armL.rotation.z = 0.12; u.armR.rotation.z = -0.12;
+  } else {
+    u.armL.rotation.x += ((Math.sin(t * 1.4 + u.phase) * 0.07) - u.armL.rotation.x) * kp;
+    u.armR.rotation.x += ((Math.sin(t * 1.4 + u.phase + 1) * 0.07) - u.armR.rotation.x) * kp;
+    u.armL.rotation.z += (0.06 - u.armL.rotation.z) * kp;
+    u.armR.rotation.z += (-0.06 - u.armR.rotation.z) * kp;
+  }
+  u.head.rotation.x = working ? 0.14 + Math.sin(t * 3 + u.phase) * 0.04 : Math.sin(t * 1.1 + u.phase) * 0.05;
+  u.head.rotation.y = working ? 0 : Math.sin(t * 0.65 + u.phase) * 0.32;
+  // cheer hop saat task selesai
+  if (u.cheerT > 0) {
+    u.cheerT += dt;
+    const p = u.cheerT / 0.75;
+    if (p >= 1) { u.cheerT = 0; root.position.y = 0; }
+    else {
+      root.position.y = Math.sin(p * Math.PI) * 0.42;
+      u.armL.rotation.x = -2.5; u.armR.rotation.x = -2.5;
+    }
+  }
+  // ring status
+  const col = u.status === 'working' ? 0x34d399 : u.status === 'paused' ? 0xf5a524 : 0x6b7280;
+  u.ring.material.color.setHex(col);
+  u.ring.material.opacity = u.status === 'working' ? 0.55 + Math.sin(t * 6 + u.phase) * 0.25 : 0.5;
+}
+
+/* ---------------- Sinkron status dari /api/state ---------------- */
+function updateOffice(d) {
+  if (!office.ready || !d || !d.agents) return;
+  d.agents.forEach((a, i) => {
+    const root = office.robots[a.id];
+    if (!root) return;
+    const u = root.userData;
+    u.status = a.status;
+    const spot = a.status === 'working' ? office.seats[i] : office.backRow[i];
+    u.tx = spot.x; u.tz = spot.z; u.try_ = spot.ry;
+  });
+}
+
+/* ---------------- Boot ---------------- */
+initOffice();
+if (state.data) updateOffice(state.data);
+</script>
+</body>
+</html>
