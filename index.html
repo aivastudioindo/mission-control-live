@@ -154,7 +154,7 @@ details.sys[open] summary .chev{transform:rotate(90deg)}
     <header class="topbar">
       <div class="page-title" id="page-title">Virtual Office</div>
       <div class="topbar-right">
-        <span class="pill blue" id="live-badge" style="display:none">📡 mode pantau • ~20 dtk</span>
+        <span class="pill blue" id="live-badge" style="display:none">📡 live • perintah via relay</span>
         <a class="tunnel-badge" id="tunnel-badge" href="#" target="_blank" rel="noopener"><span class="dot"></span><span class="url" id="tunnel-url">tunnel: —</span></a>
         <span class="clock mono" id="clock">—</span>
         <button class="btn ghost" id="dispatch-btn">⏸ Pause dispatch</button>
@@ -389,7 +389,7 @@ function render() {
 
 function renderTopbar(d) {
   const tb = $('tunnel-badge');
-  if (IS_LIVE) { tb.style.display = 'none'; $('live-badge').style.display = 'inline-flex'; $('dispatch-btn').disabled = true; $('dispatch-btn').style.opacity = .45; return; }
+  if (IS_LIVE) { tb.style.display = 'none'; $('live-badge').style.display = 'inline-flex'; return; }
   if (d.vps.tunnel_url) {
     tb.href = d.vps.tunnel_url;
     $('tunnel-url').textContent = d.vps.tunnel_url.replace(/^https?:\/\//, '');
@@ -445,9 +445,9 @@ function renderQueue(d) {
 }
 document.querySelectorAll('.quick-btn').forEach(b => b.addEventListener('click', () => { $('q-agent').value = b.dataset.agent; $('q-prompt').focus(); }));
 $('q-add').addEventListener('click', async () => {
-  if (IS_LIVE) { toast('Mode pantau: ketik di chat WA ke Muse saja — mis: antrean tono: riset kompetitor'); return; }
   const prompt = $('q-prompt').value.trim(), agent = $('q-agent').value;
   if (!prompt) { toast('Isi dulu prompt tugasnya'); return; }
+  if (IS_LIVE) { liveSend({ t: 'q', prompt, agent }, 'Masuk antrean ✓ — tampil ~20 dtk lagi'); $('q-prompt').value = ''; poll(); return; }
   const r = await fetch('/api/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, agent }) });
   const j = await r.json().catch(() => ({}));
   if (r.ok) { $('q-prompt').value = ''; toast('Masuk antrean ✓'); poll(); }
@@ -797,7 +797,6 @@ function initOffice() {
   /* ----- Klik robot = pause/resume ----- */
   const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
   function handleTap(cx, cy) {
-    if (IS_LIVE) { toast('Mode pantau: klik-pause hanya dari jaringan lokal'); return; }
     const rect = el.getBoundingClientRect();
     mouse.x = ((cx - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((cy - rect.top) / rect.height) * 2 + 1;
@@ -807,6 +806,7 @@ function initOffice() {
     const id = hits[0].object.userData.agentId;
     const cur = (state.data && state.data.agents.find(a => a.id === id));
     const paused = !(cur && cur.status === 'paused');
+    if (IS_LIVE) { liveSend({ t: 'p', agent: id, paused }, (cur ? cur.name : id) + (paused ? ' di-pause ⏸' : ' di-resume ▶')); poll(); return; }
     fetch('/api/agent-pause', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agent: id, paused }) })
       .then(r => r.json()).then(() => { toast((cur ? cur.name : id) + (paused ? ' di-pause ⏸' : ' di-resume ▶')); poll(); });
   }
