@@ -404,7 +404,7 @@ function renderQueue(d) {
 }
 document.querySelectorAll('.quick-btn').forEach(b => b.addEventListener('click', () => { $('q-agent').value = b.dataset.agent; $('q-prompt').focus(); }));
 $('q-add').addEventListener('click', async () => {
-  if (IS_LIVE) { toast('Mode pantau: tambah antrean hanya dari jaringan lokal'); return; }
+  if (IS_LIVE) { toast('Mode pantau: ketik di chat WA ke Muse saja — mis: antrean tono: riset kompetitor'); return; }
   const prompt = $('q-prompt').value.trim(), agent = $('q-agent').value;
   if (!prompt) { toast('Isi dulu prompt tugasnya'); return; }
   const r = await fetch('/api/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, agent }) });
